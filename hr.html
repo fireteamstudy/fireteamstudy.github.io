@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Practice — Fireteam Study</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* ---------- HR-specific ---------- */
+  .filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .filters select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .filters .count-pill {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .loading-card, .error-card {
+    text-align: center;
+    padding: 40px 24px;
+  }
+  .loading-card { color: var(--text-dim); }
+  .error-card h2 {
+    font-size: 18px;
+    color: var(--warn);
+    margin-bottom: 10px;
+  }
+  .error-card p {
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 480px;
+    margin: 0 auto 6px;
+  }
+  .error-card code {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: "SF Mono", Monaco, monospace;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim);
+  }
+  .meta-tag {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .meta-tag.cat { color: #a78bfa; }
+  .meta-tag.diff-easy   { color: var(--good); }
+  .meta-tag.diff-medium { color: var(--warn); }
+  .meta-tag.diff-hard   { color: var(--bad); }
+
+  .scenario-text {
+    font-size: 15.5px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .question-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-top: -4px;
+  }
+
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .option {
+    display: flex;
+    gap: 12px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-align: left;
+    font-family: inherit;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    width: 100%;
+  }
+  .option:hover:not(:disabled) {
+    border-color: var(--border-hi);
+    background: #142033;
+  }
+  @media (hover: none) {
+    .option:hover:not(:disabled) { border-color: var(--border); background: var(--bg); }
+  }
+  .option .letter {
+    background: var(--accent);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .option .body { flex: 1; }
+  .option .explanation {
+    font-size: 13px;
+    color: var(--text-mid);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    line-height: 1.55;
+    display: none;
+  }
+  .option.correct {
+    border-color: var(--good);
+    background: #0d2818;
+  }
+  .option.correct .letter { background: var(--good); color: var(--bg); }
+  .option.wrong {
+    border-color: var(--bad);
+    background: #2a1414;
+  }
+  .option.wrong .letter { background: var(--bad); color: var(--bg); }
+  .option.show-exp .explanation { display: block; }
+  .option:disabled { cursor: default; }
+
+  .feedback-banner {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .feedback-banner.correct {
+    background: #0d2818;
+    color: var(--good);
+    border: 1px solid #1d4530;
+  }
+  .feedback-banner.wrong {
+    background: #2a1414;
+    color: var(--bad);
+    border: 1px solid #4a1f1f;
+  }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+  .stat {
+    text-align: center;
+    padding: 4px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-label {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stat.correct .stat-value { color: var(--good); }
+  .stat.wrong .stat-value   { color: var(--bad); }
+  .stat.acc .stat-value     { color: var(--warn); }
+
+  /* Category breakdown (optional collapsed view) */
+  .cat-break {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .cat-break-header {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .cat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    color: var(--text-mid);
+  }
+  .cat-row .cat-name { text-transform: capitalize; }
+  .cat-row .cat-score { font-family: "SF Mono", Monaco, monospace; }
+  .cat-row .cat-score.good { color: var(--good); }
+  .cat-row .cat-score.bad  { color: var(--bad); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header-bar">
+    <a href="index.html" class="header-link left">&larr; Home</a>
+    <h1>Human Relations</h1>
+    <button class="header-link right" id="resetBtn" title="Reset session" style="display: none;">Reset</button>
+  </div>
+
+  <!-- LOADING / ERROR STATES -->
+  <div class="card loading-card" id="loadingCard">
+    <p>Loading scenarios...</p>
+  </div>
+
+  <div class="card error-card" id="errorCard" style="display: none;">
+    <h2 id="errorTitle">No scenarios found</h2>
+    <p id="errorBody">
+      Expected to load <code>data/hr_scenarios.json</code> but couldn't find it.
+    </p>
+    <p style="margin-top: 12px;">
+      Run the generator script and place the output file at <code>data/hr_scenarios.json</code>, then refresh.
+    </p>
+  </div>
+
+  <!-- MAIN PRACTICE AREA -->
+  <div id="practiceArea" style="display: none; flex-direction: column; gap: 16px;">
+
+    <div class="filters">
+      <label>Category</label>
+      <select id="filterCategory">
+        <option value="all">All</option>
+      </select>
+      <label>Difficulty</label>
+      <select id="filterDifficulty">
+        <option value="all">All</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+      </select>
+      <span class="count-pill" id="poolCount"></span>
+    </div>
+
+    <div class="card" id="scenarioCard">
+      <div class="meta-row" id="metaRow"></div>
+      <div class="scenario-text" id="scenarioText"></div>
+      <div class="question-text" id="questionText"></div>
+      <div class="options-list" id="optionsList"></div>
+      <div class="feedback-banner" id="feedbackBanner" style="display: none;"></div>
+      <button class="btn btn-primary" id="nextBtn" style="display: none;">Next Scenario</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat correct">
+        <div class="stat-value" id="statCorrect">0</div>
+        <div class="stat-label">Correct</div>
+      </div>
+      <div class="stat wrong">
+        <div class="stat-value" id="statWrong">0</div>
+        <div class="stat-label">Wrong</div>
+      </div>
+      <div class="stat acc">
+        <div class="stat-value" id="statAccuracy">&mdash;</div>
+        <div class="stat-label">Accuracy</div>
+      </div>
+    </div>
+
+    <div class="cat-break" id="catBreak" style="display: none;">
+      <div class="cat-break-header">Performance by Category</div>
+      <div id="catBreakBody"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// =========================================================================
+// State
+// =========================================================================
+
+const state = {
+  allScenarios: [],           // full bank loaded from JSON
+  pool: [],                   // currently selected by filters
+  unseen: [],                 // pool minus what we've already shown this session
+  current: null,              // currently displayed scenario (with shuffled options)
+  answered: false,
+  filter: { category: 'all', difficulty: 'all' },
+  stats: {
+    correct: 0,
+    wrong: 0,
+    byCategory: {},           // { category: { correct, wrong } }
+  },
+};
+
+// =========================================================================
+// DOM
+// =========================================================================
+
+const $ = id => document.getElementById(id);
+const els = {
+  loadingCard: $('loadingCard'),
+  errorCard: $('errorCard'),
+  errorTitle: $('errorTitle'),
+  errorBody: $('errorBody'),
+  practiceArea: $('practiceArea'),
+  filterCategory: $('filterCategory'),
+  filterDifficulty: $('filterDifficulty'),
+  poolCount: $('poolCount'),
+  metaRow: $('metaRow'),
+  scenarioText: $('scenarioText'),
+  questionText: $('questionText'),
+  optionsList: $('optionsList'),
+  feedbackBanner: $('feedbackBanner'),
+  nextBtn: $('nextBtn'),
+  resetBtn: $('resetBtn'),
+  statCorrect: $('statCorrect'),
+  statWrong: $('statWrong'),
+  statAccuracy: $('statAccuracy'),
+  catBreak: $('catBreak'),
+  catBreakBody: $('catBreakBody'),
+};
+
+// =========================================================================
+// Utilities
+// =========================================================================
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function titleCase(s) {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// =========================================================================
+// Loading
+// =========================================================================
+
+async function loadScenarios() {
+  try {
+    const res = await fetch('data/hr_scenarios.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.scenarios || !Array.isArray(data.scenarios) || data.scenarios.length === 0) {
+      throw new Error('JSON loaded but contains no scenarios');
+    }
+    state.allScenarios = data.scenarios;
+    initFiltersFromData();
+    rebuildPool();
+    els.loadingCard.style.display = 'none';
+    els.practiceArea.style.display = 'flex';
+    els.resetBtn.style.display = 'flex';
+    nextScenario();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+function showError(err) {
+  els.loadingCard.style.display = 'none';
+  els.errorCard.style.display = 'block';
+  // Customize message if it's an empty bank vs not found
+  if (err && err.message && err.message.includes('contains no scenarios')) {
+    els.errorTitle.textContent = 'Empty scenario file';
+    els.errorBody.innerHTML = 'The file <code>data/hr_scenarios.json</code> loaded but contains no scenarios. Run the generator and replace it.';
+  }
+  console.error('HR load error:', err);
+}
+
+// =========================================================================
+// Filters
+// =========================================================================
+
+function initFiltersFromData() {
+  // Build category dropdown from the bank's unique categories
+  const cats = [...new Set(state.allScenarios.map(s => s.category))].sort();
+  for (const c of cats) {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = titleCase(c);
+    els.filterCategory.appendChild(opt);
+  }
+}
+
+function rebuildPool() {
+  state.pool = state.allScenarios.filter(s => {
+    if (state.filter.category !== 'all' && s.category !== state.filter.category) return false;
+    if (state.filter.difficulty !== 'all' && s.difficulty !== state.filter.difficulty) return false;
+    return true;
+  });
+  // Reset unseen list when pool changes
+  state.unseen = shuffle(state.pool);
+  els.poolCount.textContent = `${state.pool.length} in pool`;
+}
+
+// =========================================================================
+// Scenario flow
+// =========================================================================
+
+function nextScenario() {
+  if (state.pool.length === 0) {
+    els.scenarioText.textContent = 'No scenarios match the current filters.';
+    els.questionText.textContent = '';
+    els.optionsList.innerHTML = '';
+    els.metaRow.innerHTML = '';
+    els.feedbackBanner.style.display = 'none';
+    els.nextBtn.style.display = 'none';
+    return;
+  }
+
+  // Refill unseen if exhausted
+  if (state.unseen.length === 0) {
+    state.unseen = shuffle(state.pool);
+  }
+
+  const raw = state.unseen.shift();
+  // Shuffle option positions so the correct answer's letter isn't a tell
+  const shuffledOptions = shuffle(raw.options).map((o, i) => ({
+    ...o,
+    letter: String.fromCharCode(65 + i),  // re-letter A, B, C, D
+  }));
+
+  state.current = { ...raw, options: shuffledOptions };
+  state.answered = false;
+  renderScenario();
+}
+
+function renderScenario() {
+  const s = state.current;
+
+  // Meta tags
+  els.metaRow.innerHTML = `
+    <span class="meta-tag cat">${titleCase(s.category)}</span>
+    <span class="meta-tag diff-${s.difficulty}">${s.difficulty}</span>
+  `;
+
+  els.scenarioText.textContent = s.scenario;
+  els.questionText.textContent = s.question || 'What is the best response?';
+
+  els.optionsList.innerHTML = '';
+  for (const opt of s.options) {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.dataset.letter = opt.letter;
+    btn.innerHTML = `
+      <span class="letter">${opt.letter}</span>
+      <span class="body">
+        <span class="text">${escapeHtml(opt.text)}</span>
+        <div class="explanation">${escapeHtml(opt.explanation || '')}</div>
+      </span>
+    `;
+    btn.addEventListener('click', () => handleAnswer(opt.letter));
+    els.optionsList.appendChild(btn);
+  }
+
+  els.feedbackBanner.style.display = 'none';
+  els.feedbackBanner.className = 'feedback-banner';
+  els.nextBtn.style.display = 'none';
+}
+
+function handleAnswer(pickedLetter) {
+  if (state.answered) return;
+  state.answered = true;
+
+  const correctLetter = state.current.options.find(o => o.is_correct).letter;
+  const isCorrect = pickedLetter === correctLetter;
+
+  // Mark and reveal explanations
+  document.querySelectorAll('.option').forEach(btn => {
+    btn.disabled = true;
+    btn.classList.add('show-exp');
+    const letter = btn.dataset.letter;
+    if (letter === correctLetter) {
+      btn.classList.add('correct');
+    } else if (letter === pickedLetter) {
+      btn.classList.add('wrong');
+    }
+  });
+
+  // Feedback banner
+  els.feedbackBanner.style.display = 'block';
+  if (isCorrect) {
+    els.feedbackBanner.classList.add('correct');
+    els.feedbackBanner.textContent = 'Correct';
+  } else {
+    els.feedbackBanner.classList.add('wrong');
+    els.feedbackBanner.textContent = `Best answer: ${correctLetter}`;
+  }
+
+  els.nextBtn.style.display = 'block';
+
+  // Update stats
+  const cat = state.current.category;
+  if (!state.stats.byCategory[cat]) state.stats.byCategory[cat] = { correct: 0, wrong: 0 };
+  if (isCorrect) {
+    state.stats.correct++;
+    state.stats.byCategory[cat].correct++;
+  } else {
+    state.stats.wrong++;
+    state.stats.byCategory[cat].wrong++;
+  }
+  updateStats();
+}
+
+function updateStats() {
+  els.statCorrect.textContent = state.stats.correct;
+  els.statWrong.textContent = state.stats.wrong;
+  const total = state.stats.correct + state.stats.wrong;
+  els.statAccuracy.textContent = total > 0 ? Math.round(100 * state.stats.correct / total) + '%' : '—';
+
+  // Category breakdown
+  const cats = Object.keys(state.stats.byCategory);
+  if (cats.length === 0) {
+    els.catBreak.style.display = 'none';
+    return;
+  }
+  els.catBreak.style.display = 'block';
+  els.catBreakBody.innerHTML = '';
+  cats.sort().forEach(cat => {
+    const { correct, wrong } = state.stats.byCategory[cat];
+    const ctotal = correct + wrong;
+    const pct = Math.round(100 * correct / ctotal);
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    const cls = pct >= 75 ? 'good' : (pct < 50 ? 'bad' : '');
+    row.innerHTML = `
+      <span class="cat-name">${titleCase(cat)}</span>
+      <span class="cat-score ${cls}">${correct}/${ctotal} (${pct}%)</span>
+    `;
+    els.catBreakBody.appendChild(row);
+  });
+}
+
+function resetSession() {
+  state.stats = { correct: 0, wrong: 0, byCategory: {} };
+  state.unseen = shuffle(state.pool);
+  updateStats();
+  nextScenario();
+}
+
+// HTML escape since scenario text comes from JSON
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// =========================================================================
+// Event wiring
+// =========================================================================
+
+els.nextBtn.addEventListener('click', nextScenario);
+els.resetBtn.addEventListener('click', () => {
+  if (confirm('Reset session stats and reshuffle scenarios?')) resetSession();
+});
+els.filterCategory.addEventListener('change', e => {
+  state.filter.category = e.target.value;
+  rebuildPool();
+  nextScenario();
+});
+els.filterDifficulty.addEventListener('change', e => {
+  state.filter.difficulty = e.target.value;
+  rebuildPool();
+  nextScenario();
+});
+
+// Init
+loadScenarios();
+</script>
+</body>
+</html>
