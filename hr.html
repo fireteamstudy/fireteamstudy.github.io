@@ -79,6 +79,10 @@
   .meta-tag.diff-easy   { color: var(--good); }
   .meta-tag.diff-medium { color: var(--warn); }
   .meta-tag.diff-hard   { color: var(--bad); }
+  .meta-tag.src-fireteam {
+    color: #f97316;
+    border-color: #7a3b1c;
+  }
 
   .scenario-text {
     font-size: 15.5px;
@@ -256,6 +260,12 @@
   <div id="practiceArea" style="display: none; flex-direction: column; gap: 16px;">
 
     <div class="filters">
+      <label>Source</label>
+      <select id="filterSource">
+        <option value="all">All</option>
+        <option value="fireteam">Like FireTEAM exam</option>
+        <option value="generated">Generated</option>
+      </select>
       <label>Category</label>
       <select id="filterCategory">
         <option value="all">All</option>
@@ -315,7 +325,7 @@ const state = {
   unseen: [],                 // pool minus what we've already shown this session
   current: null,              // currently displayed scenario (with shuffled options)
   answered: false,
-  filter: { category: 'all', difficulty: 'all' },
+  filter: { source: 'all', category: 'all', difficulty: 'all' },
   stats: {
     correct: 0,
     wrong: 0,
@@ -336,6 +346,7 @@ const els = {
   practiceArea: $('practiceArea'),
   filterCategory: $('filterCategory'),
   filterDifficulty: $('filterDifficulty'),
+  filterSource: $('filterSource'),
   poolCount: $('poolCount'),
   metaRow: $('metaRow'),
   scenarioText: $('scenarioText'),
@@ -420,6 +431,7 @@ function initFiltersFromData() {
 
 function rebuildPool() {
   state.pool = state.allScenarios.filter(s => {
+    if (state.filter.source !== 'all' && s.source !== state.filter.source) return false;
     if (state.filter.category !== 'all' && s.category !== state.filter.category) return false;
     if (state.filter.difficulty !== 'all' && s.difficulty !== state.filter.difficulty) return false;
     return true;
@@ -465,7 +477,11 @@ function renderScenario() {
   const s = state.current;
 
   // Meta tags
+  const srcTag = s.source === 'fireteam'
+    ? '<span class="meta-tag src-fireteam">Like FireTEAM</span>'
+    : '';
   els.metaRow.innerHTML = `
+    ${srcTag}
     <span class="meta-tag cat">${titleCase(s.category)}</span>
     <span class="meta-tag diff-${s.difficulty}">${s.difficulty}</span>
   `;
@@ -600,6 +616,11 @@ els.filterCategory.addEventListener('change', e => {
 });
 els.filterDifficulty.addEventListener('change', e => {
   state.filter.difficulty = e.target.value;
+  rebuildPool();
+  nextScenario();
+});
+els.filterSource.addEventListener('change', e => {
+  state.filter.source = e.target.value;
   rebuildPool();
   nextScenario();
 });
